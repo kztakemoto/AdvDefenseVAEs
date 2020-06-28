@@ -1,4 +1,4 @@
-# note: keras >=2.4.0 and tensorflow >=2 required.
+# note: tensorflow 2 required.
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
