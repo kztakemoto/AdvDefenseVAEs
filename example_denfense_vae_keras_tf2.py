@@ -8,8 +8,8 @@ from art.classifiers import KerasClassifier
 from tests.utils import get_image_classifier_tf, get_image_classifier_kr
 
 # load mnist model
-classifier, _ = get_image_classifier_tf()
-#classifier = get_image_classifier_kr()
+#classifier, _ = get_image_classifier_tf()
+classifier = get_image_classifier_kr()
 
 ### Create a sampling layer ###############
 class Sampling(layers.Layer):
