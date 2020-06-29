@@ -4,7 +4,9 @@ import tensorflow as tf
 from keras import backend
 from loaddata import load_cifar, load_mnist
 from art.attacks.evasion import FastGradientMethod
+from art.config import ART_NUMPY_DTYPE
 import matplotlib.pyplot as plt
+from models.mnistmodel import mnist_model
 
 from keras.layers import Flatten, Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, Lambda, Reshape, Conv2DTranspose, \
     AveragePooling2D
@@ -14,8 +16,20 @@ from keras.losses import binary_crossentropy, mean_squared_error
 
 from tests.utils import get_image_classifier_kr
 
+#tf.compat.v1.enable_eager_execution()
+#tf.compat.v1.disable_eager_execution()
+
 # load pytorch mnist model available in ART
-classifier = get_image_classifier_kr()
+#classifier = get_image_classifier_kr()
+
+# Mnist model
+#x = tf.placeholder(tf.float32, shape=(None, 28, 28, 1))
+#y = tf.placeholder(tf.float32, shape=(None, 10))
+mnist_model = mnist_model()
+optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
+mnist_model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+mnist_model.load_weights("trained_model/mnist_model.h5")
+#classifier = KerasClassifier(model=mnist_model)
 
 def sampling(args):
     z_mean, z_log_sigma = args
@@ -26,12 +40,15 @@ def sampling(args):
     return z_mean + K.exp(0.5 * z_log_sigma) * epsilon
 
 
-def DefenseVAE(latent_dim=256):
-    inputs = Input(shape=(28, 28, 1)) #
-    inputs2 = Input(shape=(28, 28, 1))
-    latent_dim = latent_dim
+def DefenseVAE(latent_dim=256, classifier=mnist_model):
+    adv_images = Input(shape=(28, 28, 1)) #
+    clean_images = Input(shape=(28, 28, 1))
+    labels = Input(shape=(10,))
 
-    x = Conv2D(16, (3, 3), activation='relu', padding='same')(inputs)
+    latent_dim = latent_dim
+    classifier = mnist_model
+
+    x = Conv2D(16, (3, 3), activation='relu', padding='same')(adv_images)
     x = MaxPooling2D((2, 2), padding='same')(x)
     x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
     x = MaxPooling2D((2, 2), padding='same')(x)
@@ -47,7 +64,7 @@ def DefenseVAE(latent_dim=256):
     z_log_sigma = Dense(latent_dim)(x)
 
     z = Lambda(sampling, output_shape=(latent_dim,))([z_mean, z_log_sigma])
-    encoder = Model(inputs, [z_mean, z_log_sigma, z], name='encoder')
+    encoder = Model(adv_images, [z_mean, z_log_sigma, z], name='encoder')
     print(encoder.summary())
 
     latent_inputs = Input(shape=(latent_dim,))
@@ -69,15 +86,24 @@ def DefenseVAE(latent_dim=256):
 
     decoder = Model(latent_inputs, decoded, name='decoder')
     print(decoder.summary())
-    outputs = decoder(encoder(inputs)[2])
-    vae = Model((inputs, inputs2), outputs, name='VAE')
+    reconstruction = decoder(encoder(adv_images)[2])
+    vae = Model([adv_images, clean_images, labels], reconstruction, name='VAE')
 
-    reconstruction_loss = mean_squared_error(K.flatten(inputs), K.flatten(outputs))
+    reconstruction_loss = K.sum(keras.losses.binary_crossentropy(clean_images, reconstruction), axis=-1)
     reconstruction_loss *= 784
+
     kl_loss = 1 + z_log_sigma - K.square(z_mean) - K.exp(z_log_sigma)
     kl_loss = K.sum(kl_loss, axis=-1)
     kl_loss *= -0.5
-    vae_loss = K.mean(reconstruction_loss + kl_loss * 0.01)
+
+    print(reconstruction.shape)
+    y_pred = classifier.predict(reconstruction)
+    print(y_pred.shape)
+    model_loss = K.sum(
+        keras.losses.categorical_crossentropy(labels, y_pred),
+        axis=-1
+    )
+    vae_loss = K.mean(reconstruction_loss + kl_loss + model_loss)
     vae.add_loss(vae_loss)
 
     return vae
@@ -88,4 +114,5 @@ x_train_adv = x_train.copy()
 
 model = DefenseVAE()
 model.compile(optimizer='adam')
-model.fit([x_train_adv, x_train], epochs=30, batch_size=128)
+
+model.fit([x_train_adv, x_train, y_train], epochs=30, batch_size=128)
