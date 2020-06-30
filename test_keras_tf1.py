@@ -6,13 +6,11 @@ from loaddata import load_cifar, load_mnist
 from art.attacks.evasion import FastGradientMethod
 from art.config import ART_NUMPY_DTYPE
 import matplotlib.pyplot as plt
-from models.mnistmodel import mnist_model
 
 from keras.layers import Flatten, Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, Lambda, Reshape, Conv2DTranspose, \
     AveragePooling2D
 from keras.models import Model
 from keras import backend as K
-from keras.losses import binary_crossentropy, mean_squared_error
 
 from tests.utils import get_image_classifier_kr
 
@@ -107,7 +105,6 @@ def DefenseVAE(latent_dim=256, classifier=mnist_model):
     vae.add_loss(vae_loss)
 
     return vae
-
 
 x_train, y_train, x_test, y_test = load_mnist()
 x_train_adv = x_train.copy()
