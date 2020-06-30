@@ -23,6 +23,9 @@ from art.defences.postprocessor import (
 )
 from models.mnistmodel import mnist_model
 from art.classifiers import KerasClassifier, PyTorchClassifier
+from art.defences.preprocessor.inverse_gan import InverseGAN
+from art.attacks.evasion import FastGradientMethod
+from tests.utils import get_gan_inverse_gan_ft
 import logging
 import matplotlib.pyplot as plt
 
@@ -170,6 +173,15 @@ preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
 logger.info('Fooling rate after Jpeg Compression: %.2f%%', (fooling_rate  * 100))
 img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "JPEG_compression")
+
+# Inverse GAN
+gan, inverse_gan, sess = get_gan_inverse_gan_ft()
+inverse_gan = InverseGAN(sess=sess, gan=gan, inverse_gan=inverse_gan)
+X_def = inverse_gan(X_adv, maxiter=1)
+preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
+fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
+logger.info('Fooling rate after Inverse GAN: %.2f%%', (fooling_rate  * 100))
+img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "inverse_GAN")
 
 ### POSTPROCESS ###################
 # High Confidence
