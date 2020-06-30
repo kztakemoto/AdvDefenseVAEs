@@ -4,8 +4,23 @@ import torch.nn as nn
 import torch.optim as optim
 from loaddata import load_cifar, load_mnist
 from art.attacks.evasion import FastGradientMethod
-from art.defences.preprocessor import FeatureSqueezing, SpatialSmoothing, LabelSmoothing, GaussianAugmentation, TotalVarMin, PixelDefend, ThermometerEncoding, JpegCompression
-from art.defences.postprocessor import HighConfidence, GaussianNoise, ClassLabels, Rounded, ReverseSigmoid
+from art.defences.preprocessor import (
+    FeatureSqueezing,
+    SpatialSmoothing,
+    LabelSmoothing,
+    GaussianAugmentation,
+    TotalVarMin,
+    PixelDefend,
+    ThermometerEncoding,
+    JpegCompression,
+)
+from art.defences.postprocessor import (
+    HighConfidence,
+    GaussianNoise,
+    ClassLabels,
+    Rounded,
+    ReverseSigmoid,
+)
 from models.mnistmodel import mnist_model
 from art.classifiers import KerasClassifier, PyTorchClassifier
 import logging
@@ -36,25 +51,25 @@ mnist_model.load_weights("trained_model/mnist_model.h5")
 classifier = KerasClassifier(model=mnist_model)
 
 # generate adversarial images using FGSM
-attack = FastGradientMethod(classifier, eps=0.1)
+attack = FastGradientMethod(classifier, eps=0.13)
 X_adv = attack.generate(x_test)
 X_adv = np.clip(X_adv, 0, 1)
 
-# Accuracy and fooling rate
+# accuracy
 preds_x_test = np.argmax(classifier.predict(x_test), axis=1)
 acc = np.sum(preds_x_test == np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Accuracy on original test images: %.2f%%', (acc * 100))
-
+logger.info('Accuracy on clean test images: %.2f%%', (acc * 100))
+# fooling rate
 probs_X_adv = classifier.predict(X_adv)
 preds_X_adv = np.argmax(probs_X_adv, axis=1)
 fooling_rate = np.sum(preds_X_adv != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of FGSM attacks on test images: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate of FGSM attacks: %.2f%%', (fooling_rate  * 100))
 
-
-# normalization for image plot
+# clip
 def norm(x):
     return np.clip(x, 0, 1)
 
+# plot images
 def img_plot(labels, preds_clean, preds_adv, preds_def, X_clean, X_adv, X_def, method_type):
     X_clean = X_clean.reshape(X_clean.shape[:3])
     X_adv = X_adv.reshape(X_adv.shape[:3])
@@ -81,7 +96,7 @@ def img_plot(labels, preds_clean, preds_adv, preds_def, X_clean, X_adv, X_def, m
         ax[i][2].imshow(norm(X_def[idx_img]))
         ax[i][2].axis('off')
         ax[i][2].set_title(label[preds_def[idx_img]])
-    plt.savefig('plot_mnist_' + method_type + '.png')
+    plt.savefig('assets/plot_mnist_' + method_type + '.png')
 
 #### Adversarial defenses ###########
 ### PREPROCESS ###################
@@ -90,7 +105,7 @@ preproc = FeatureSqueezing(clip_values=(0, 1), bit_depth=1)
 X_def, _ = preproc(X_adv)
 preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Feature Squeezing: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after Feature Squeezing: %.2f%%', (fooling_rate  * 100))
 img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "feature_squeezing")
 
 # Spatial Smoothing https://arxiv.org/abs/1704.01155
@@ -98,38 +113,33 @@ spatial_smoothing = SpatialSmoothing(window_size=4)
 X_def, _ = spatial_smoothing(X_adv)
 preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Spatial Smoothing: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after Spatial Smoothing: %.2f%%', (fooling_rate  * 100))
+img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "spatial_smoothing")
 
 # Label Smoothing https://pdfs.semanticscholar.org/b5ec/486044c6218dd41b17d8bba502b32a12b91a.pdf
 ls = LabelSmoothing(max_value=0.5)
 preds_X_adv = np.argmax(classifier.predict(X_adv), axis=1)
 _, y_test_smooth = ls(None, y_test)
 fooling_rate = np.sum(preds_X_adv != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Label Smoothing: %.2f%%', (fooling_rate  * 100))
-
-# Gaussian Augmentation https://arxiv.org/abs/1707.06728
-ga = GaussianAugmentation(augmentation=False)
-X_def, _ = ga(X_adv)
-preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
-fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Gaussian Augmentation: %.2f%%', (fooling_rate  * 100))
-#img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "gaussian_augmentation")
+logger.info('Fooling rate after Label Smoothing: %.2f%%', (fooling_rate  * 100))
 
 # Total Variance Minimization https://arxiv.org/abs/1711.00117
 preproc = TotalVarMin(clip_values=(0,1))
 X_def, _ = preproc(X_adv)
 preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Variance Minimization: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after Variance Minimization: %.2f%%', (fooling_rate  * 100))
+img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "variance_minimization")
 
 # Thermometer Encoding https://openreview.net/forum?id=S18Su--CW
 preproc = ThermometerEncoding(clip_values=(0, 1), num_space=4) # devided into 4 levels
 X_def, _ = preproc(X_adv)
 preds_X_def = np.argmax(classifier.predict(X_def[:,:,:,1].reshape(1000,28,28,1)), axis=1) # use 2nd level
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Thermometer Encoding: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after Thermometer Encoding: %.2f%%', (fooling_rate  * 100))
+img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def[:,:,:,1].reshape(1000,28,28,1), "thermometer_encoding")
 
-# Pixel Defend
+# Pixel Defend (simple PixelCNN)
 class ModelImage(nn.Module):
     def __init__(self):
         super(ModelImage, self).__init__()
@@ -150,7 +160,7 @@ preproc = PixelDefend(eps=5, pixel_cnn=pixelcnn)
 X_def, _ = preproc(X_adv)
 preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Pixel Defend: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after Pixel Defend: %.2f%%', (fooling_rate  * 100))
 img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "pixel_defend")
 
 # JPEG compression https://arxiv.org/abs/1608.00853
@@ -158,16 +168,15 @@ preproc = JpegCompression(clip_values=(0, 1))
 X_def, _ = preproc(X_adv)
 preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Jpeg Compression: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after Jpeg Compression: %.2f%%', (fooling_rate  * 100))
 img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "JPEG_compression")
-
 
 ### POSTPROCESS ###################
 # High Confidence
 postproc = HighConfidence(cutoff=0.1)
 post_probs = postproc(preds=probs_X_adv)
 fooling_rate = np.sum(np.argmax(post_probs, axis=1) != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after High Confidence: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after High Confidence: %.2f%%', (fooling_rate  * 100))
 
 # Gaussian Noise
 postproc = GaussianNoise(scale=0.1)
@@ -177,7 +186,7 @@ for i in range(1, len(X_adv)):
     post_probs = np.vstack((post_probs, tmp_post_probs))
 
 fooling_rate = np.sum(np.argmax(post_probs, axis=1) != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Gaussian Noise: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after Gaussian Noise: %.2f%%', (fooling_rate  * 100))
 
 # Class Labels
 postproc = ClassLabels()
@@ -187,7 +196,7 @@ for i in range(1, len(X_adv)):
     post_probs = np.vstack((post_probs, tmp_post_probs))
 
 fooling_rate = np.sum(np.argmax(post_probs, axis=1) != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Class Labels: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after Class Labels: %.2f%%', (fooling_rate  * 100))
 
 # Rounded
 postproc = Rounded(decimals=2)
@@ -197,7 +206,7 @@ for i in range(1, len(X_adv)):
     post_probs = np.vstack((post_probs, tmp_post_probs))
 
 fooling_rate = np.sum(np.argmax(post_probs, axis=1) != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Class Labels: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after Class Labels: %.2f%%', (fooling_rate  * 100))
 
 # Reverse Sigmoid
 postproc = ReverseSigmoid(beta=0.5, gamma=0.1)
@@ -207,7 +216,7 @@ for i in range(1, len(X_adv)):
     post_probs = np.vstack((post_probs, tmp_post_probs))
 
 fooling_rate = np.sum(np.argmax(post_probs, axis=1) != np.argmax(y_test, axis=1)) / y_test.shape[0]
-logger.info('Fooling rate of adversarial test images after Reverse Sigmoid: %.2f%%', (fooling_rate  * 100))
+logger.info('Fooling rate after Reverse Sigmoid: %.2f%%', (fooling_rate  * 100))
 
 """
 --- Memo ---
