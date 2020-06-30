@@ -26,7 +26,7 @@ python train_puvae.py
 
 
 ## Comparison with earlier methods
-Traditional preprocessors and postprocessors.
+Run preprocessors and postprocessors in ART.
 
 ```
 python run_demo_earlier_methods.py
