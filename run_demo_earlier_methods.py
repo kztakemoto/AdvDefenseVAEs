@@ -43,8 +43,8 @@ logger.addHandler(handler)
 
 # load mnist data
 x_train, y_train, x_test, y_test = load_mnist()
-x_test = x_test[0:100]
-y_test = y_test[0:100]
+x_test = x_test[0:1000]
+y_test = y_test[0:1000]
 
 # load mnist CNN model in Keras
 logger.info('MNIST Dataset')
@@ -178,23 +178,17 @@ fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0
 logger.info('Fooling rate after Jpeg Compression: %.2f%%', (fooling_rate  * 100))
 img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "JPEG_compression")
 
-# Inverse GAN
-#gan, inverse_gan, sess = get_gan_inverse_gan_ft()
-model_name = "model-dcgan"
-model_path = "./models/tensorflow1/"
-
-lr = 0.0002
-latent_enc_len = 100
-gen_tf, z_ph, gen_loss, gen_opt_tf, disc_loss_tf, disc_opt_tf, x_ph = build_gan_graph(lr, latent_enc_len)
-enc_tf, image_to_enc_ph, latent_enc_loss, enc_opt = build_inverse_gan_graph(lr, gen_tf, z_ph, latent_enc_len)
+# Inverse GAN https://arxiv.org/abs/1911.10291
+# note: Inverse GAN not trained well.
+# run adversarial-robustness-toolbox/utils/resources/create_inverse_gan_models.py
+# for obtaining (training) Inverse GAN model.
 sess = tf.Session()
-saver = tf.train.import_meta_graph("./models/tensorflow1/model-dcgan.meta") 
-saver.restore(sess, "./models/tensorflow1/model-dcgan")
+sess.run(tf.global_variables_initializer())
+gen_tf, enc_tf, z_ph, image_to_enc_ph = load_model(sess, "model-dcgan", "./trained_model/inverseGAN/")
 gan = TensorFlowGenerator(input_ph=z_ph, model=gen_tf, sess=sess,)
 inverse_gan = TensorFlowEncoder(input_ph=image_to_enc_ph, model=enc_tf, sess=sess,)
-
 preproc = InverseGAN(sess=sess, gan=gan, inverse_gan=inverse_gan)
-X_def = preproc(X_adv, maxiter=1)
+X_def = preproc(X_adv, maxiter=1000)
 preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
 logger.info('Fooling rate after Inverse GAN: %.2f%%', (fooling_rate  * 100))
