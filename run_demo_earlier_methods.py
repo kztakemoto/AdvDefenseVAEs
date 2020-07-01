@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import tensorflow as tf
 import torch.nn as nn
@@ -26,6 +27,9 @@ from art.classifiers import KerasClassifier, PyTorchClassifier
 from art.defences.preprocessor.inverse_gan import InverseGAN
 from art.attacks.evasion import FastGradientMethod
 from tests.utils import get_gan_inverse_gan_ft
+from utils.resources.create_inverse_gan_models import build_gan_graph, build_inverse_gan_graph
+from art.estimators.encoding.tensorflow import TensorFlowEncoder
+from art.estimators.generation.tensorflow import TensorFlowGenerator
 import logging
 import matplotlib.pyplot as plt
 
@@ -39,8 +43,8 @@ logger.addHandler(handler)
 
 # load mnist data
 x_train, y_train, x_test, y_test = load_mnist()
-x_test = x_test[0:1000]
-y_test = y_test[0:1000]
+x_test = x_test[0:100]
+y_test = y_test[0:100]
 
 # load mnist CNN model in Keras
 logger.info('MNIST Dataset')
@@ -175,9 +179,22 @@ logger.info('Fooling rate after Jpeg Compression: %.2f%%', (fooling_rate  * 100)
 img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "JPEG_compression")
 
 # Inverse GAN
-gan, inverse_gan, sess = get_gan_inverse_gan_ft()
-inverse_gan = InverseGAN(sess=sess, gan=gan, inverse_gan=inverse_gan)
-X_def = inverse_gan(X_adv, maxiter=1)
+#gan, inverse_gan, sess = get_gan_inverse_gan_ft()
+model_name = "model-dcgan"
+model_path = "./models/tensorflow1/"
+
+lr = 0.0002
+latent_enc_len = 100
+gen_tf, z_ph, gen_loss, gen_opt_tf, disc_loss_tf, disc_opt_tf, x_ph = build_gan_graph(lr, latent_enc_len)
+enc_tf, image_to_enc_ph, latent_enc_loss, enc_opt = build_inverse_gan_graph(lr, gen_tf, z_ph, latent_enc_len)
+sess = tf.Session()
+saver = tf.train.import_meta_graph("./models/tensorflow1/model-dcgan.meta") 
+saver.restore(sess, "./models/tensorflow1/model-dcgan")
+gan = TensorFlowGenerator(input_ph=z_ph, model=gen_tf, sess=sess,)
+inverse_gan = TensorFlowEncoder(input_ph=image_to_enc_ph, model=enc_tf, sess=sess,)
+
+preproc = InverseGAN(sess=sess, gan=gan, inverse_gan=inverse_gan)
+X_def = preproc(X_adv, maxiter=1)
 preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
 logger.info('Fooling rate after Inverse GAN: %.2f%%', (fooling_rate  * 100))
