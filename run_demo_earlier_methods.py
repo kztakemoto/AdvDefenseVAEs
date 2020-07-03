@@ -27,7 +27,7 @@ from art.classifiers import KerasClassifier, PyTorchClassifier
 from art.defences.preprocessor.inverse_gan import InverseGAN
 from art.attacks.evasion import FastGradientMethod
 from tests.utils import get_gan_inverse_gan_ft
-from utils.resources.create_inverse_gan_models import build_gan_graph, build_inverse_gan_graph
+from utils.resources.create_inverse_gan_models import build_gan_graph, build_inverse_gan_graph, load_model
 from art.estimators.encoding.tensorflow import TensorFlowEncoder
 from art.estimators.generation.tensorflow import TensorFlowGenerator
 import logging
@@ -183,12 +183,11 @@ img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "
 # run adversarial-robustness-toolbox/utils/resources/create_inverse_gan_models.py
 # for obtaining (training) Inverse GAN model.
 sess = tf.Session()
-sess.run(tf.global_variables_initializer())
-gen_tf, enc_tf, z_ph, image_to_enc_ph = load_model(sess, "model-dcgan", "./trained_model/inverseGAN/")
+gen_tf, enc_tf, z_ph, image_to_enc_ph = load_model(sess, "model-dcgan", "/Users/takemoto/inverseGAN/")
 gan = TensorFlowGenerator(input_ph=z_ph, model=gen_tf, sess=sess,)
 inverse_gan = TensorFlowEncoder(input_ph=image_to_enc_ph, model=enc_tf, sess=sess,)
 preproc = InverseGAN(sess=sess, gan=gan, inverse_gan=inverse_gan)
-X_def = preproc(X_adv, maxiter=1000)
+X_def = preproc(X_adv, maxiter=20)
 preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
 logger.info('Fooling rate after Inverse GAN: %.2f%%', (fooling_rate  * 100))
