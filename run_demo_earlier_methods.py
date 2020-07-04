@@ -187,6 +187,7 @@ gen_tf, enc_tf, z_ph, image_to_enc_ph = load_model(sess, "model-dcgan", "/Users/
 gan = TensorFlowGenerator(input_ph=z_ph, model=gen_tf, sess=sess,)
 inverse_gan = TensorFlowEncoder(input_ph=image_to_enc_ph, model=enc_tf, sess=sess,)
 preproc = InverseGAN(sess=sess, gan=gan, inverse_gan=inverse_gan)
+#preproc = InverseGAN(sess=sess, gan=gan, inverse_gan=None) # DefenseGAN
 X_def = preproc(X_adv, maxiter=20)
 preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
