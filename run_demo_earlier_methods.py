@@ -183,7 +183,7 @@ img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "
 # run adversarial-robustness-toolbox/utils/resources/create_inverse_gan_models.py
 # for obtaining (training) Inverse GAN model.
 sess = tf.Session()
-gen_tf, enc_tf, z_ph, image_to_enc_ph = load_model(sess, "model-dcgan", "/Users/takemoto/inverseGAN/")
+gen_tf, enc_tf, z_ph, image_to_enc_ph = load_model(sess, "model-dcgan", "/home/takemoto/inverseGAN/")
 gan = TensorFlowGenerator(input_ph=z_ph, model=gen_tf, sess=sess,)
 inverse_gan = TensorFlowEncoder(input_ph=image_to_enc_ph, model=enc_tf, sess=sess,)
 preproc = InverseGAN(sess=sess, gan=gan, inverse_gan=inverse_gan)
