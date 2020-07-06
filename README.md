@@ -57,5 +57,5 @@ Feature Squeezing
 
 Inverse GAN
 
-![Feature Squeezing](assets/plot_mnist_feature_inverse_GAN.png)
+![Inverse GAN](assets/plot_mnist_inverse_GAN.png)
 
