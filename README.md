@@ -34,22 +34,28 @@ python run_demo_earlier_methods.py
 
 Tests using a CNN model for the MNIST dataset `models/mnistmodel.py`
 - Accuracy on clean images (1000 test images): 98.90%
-- Fooling rate of FGSM (`eps=0.13, norm=np.inf`): 52.00%
+- Fooling rate of FGSM (`eps=0.13, norm=np.inf`): 52.30%
 
 | Method | Fooling rate |
 | ---- | ---- | 
 | Feature Squeezing | 3.70% |
 | Spatial Smoothing | 48.40% |
-| Label Smoothing | 52.00% |
-| Variance Minimization | 55.00% |
+| Label Smoothing | 52.30% |
+| Variance Minimization | 54.40% |
 | Thermometer Encoding | 3.20% |
-| Pixel Defend | 48.90% |
+| Pixel Defend (`eps=32`) | 28.70% |
 | Jpeg Compression | 46.90% |
-| InverseGAN | 10.20% |
-| DefenseGAN | 32.50% |
+| DefenseGAN | 37.20% |
+| InverseGAN | 11.50% |
 
 
-Example of Feature Squeezing
+### Examples
+
+Feature Squeezing
 
 ![Feature Squeezing](assets/plot_mnist_feature_squeezing.png)
+
+Inverse GAN
+
+![Feature Squeezing](assets/plot_mnist_feature_inverse_GAN.png)
 
