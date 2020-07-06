@@ -163,7 +163,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.01)
 pixelcnn = PyTorchClassifier(
     model=model, loss=loss_fn, optimizer=optimizer, input_shape=(1, 28, 28), nb_classes=10, clip_values=(0, 1)
 )
-preproc = PixelDefend(eps=5, pixel_cnn=pixelcnn)
+preproc = PixelDefend(eps=32, pixel_cnn=pixelcnn)
 X_def, _ = preproc(X_adv)
 preds_X_def = np.argmax(classifier.predict(X_def), axis=1)
 fooling_rate = np.sum(preds_X_def != np.argmax(y_test, axis=1)) / y_test.shape[0]
@@ -179,7 +179,6 @@ logger.info('Fooling rate after Jpeg Compression: %.2f%%', (fooling_rate  * 100)
 img_plot(y_test, preds_x_test, preds_X_adv, preds_X_def, x_test, X_adv, X_def, "JPEG_compression")
 
 # Inverse GAN https://arxiv.org/abs/1911.10291
-# note: Inverse GAN not trained well.
 # run adversarial-robustness-toolbox/utils/resources/create_inverse_gan_models.py
 # for obtaining (training) Inverse GAN model.
 sess = tf.Session()
@@ -243,7 +242,5 @@ logger.info('Fooling rate after Reverse Sigmoid: %.2f%%', (fooling_rate  * 100))
 
 """
 --- Memo ---
-InverseGAN (An Lin et al. 2019) # only used in tensorflow
-DefenseGAN (Samangouei et al. 2018) # unavailable in ART?
 Virtual adversarial training (Miyato et al., 2015) # unavailable in ART?
 """

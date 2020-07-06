@@ -45,6 +45,8 @@ Tests using a CNN model for the MNIST dataset `models/mnistmodel.py`
 | Thermometer Encoding | 3.20% |
 | Pixel Defend | 48.90% |
 | Jpeg Compression | 46.90% |
+| InverseGAN | 10.20% |
+| DefenseGAN | 32.50% |
 
 
 Example of Feature Squeezing
