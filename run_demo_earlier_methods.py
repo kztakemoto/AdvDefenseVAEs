@@ -25,7 +25,6 @@ from art.defences.postprocessor import (
 from models.mnistmodel import mnist_model
 from art.classifiers import KerasClassifier, PyTorchClassifier
 from art.defences.preprocessor.inverse_gan import InverseGAN
-from art.attacks.evasion import FastGradientMethod
 from tests.utils import get_gan_inverse_gan_ft
 from utils.resources.create_inverse_gan_models import build_gan_graph, build_inverse_gan_graph, load_model
 from art.estimators.encoding.tensorflow import TensorFlowEncoder
